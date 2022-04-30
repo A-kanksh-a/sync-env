@@ -20,6 +20,12 @@ go build
 
 ## On K8S Cluster
 
+### Build the controller image and push to docker registry 
+```
+docker build -t akankshakumari393/sync-env:0.0.1 .
+docker push akankshakumari393/sync-env:0.0.1
+```
+
 ### create a namespace in which controller would run
 
 ```
