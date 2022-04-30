@@ -39,7 +39,7 @@ func newController(clientset kubernetes.Interface, cmInformer coreinformers.Conf
 			DeleteFunc: controller.cmDeleted,
 		},
 	)
-	return c
+	return controller
 }
 
 func (c *controller) run(ch <-chan struct{}) {
