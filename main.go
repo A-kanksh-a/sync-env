@@ -54,10 +54,14 @@ func main() {
 	for _, cm := range cmList.Items {
 		fmt.Println(cm.Name)
 	}
+	//If we want to watch specific resources
+	labelOptions := informers.WithTweakListOptions(func(opts *v1.ListOptions) {
+		//opts.LabelSelector = "app=nats-box"
+	})
 
-	fmt.Println("Printing Informer")
-
-	informers := informers.NewSharedInformerFactory(clientset, 10*time.Minute)
+	// By default NewSharedInformerFactory creates informerfactory for all Namespaces
+	// Use NewSharedInformerFactoryWithOptions for creating informer instance in specific namespace
+	informers := informers.NewSharedInformerFactoryWithOptions(clientset, 10*time.Minute, informers.WithNamespace("default"), labelOptions)
 	ch := make(chan struct{})
 	c := newController(clientset, informers.Core().V1().ConfigMaps())
 	informers.Start(ch)

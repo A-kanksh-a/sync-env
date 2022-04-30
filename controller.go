@@ -46,7 +46,7 @@ func (c *controller) run(ch <-chan struct{}) {
 	fmt.Println("Running controller")
 	// Informer maintains a cache that needs to be synced for the first time this brings configMap from all the namespaces
 	if !cache.WaitForCacheSync(ch, c.cmhasSynced) {
-		fmt.Printf("error Cache not synced")
+		fmt.Printf("\nerror Cache not synced")
 	}
 	go wait.Until(c.worker, 1*time.Second, ch)
 
@@ -91,7 +91,7 @@ func (c *controller) syncCM(ns, name string) error {
 	deployments, err := c.clientset.AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		// handle error
-		fmt.Printf("error %s, listing deployments\n", err.Error())
+		fmt.Printf("\nerror %s, listing deployments\n", err.Error())
 	}
 
 	_, err = c.clientset.CoreV1().ConfigMaps(ns).Get(context.Background(), name, metav1.GetOptions{})
@@ -130,7 +130,7 @@ func (c *controller) syncCM(ns, name string) error {
 			}
 			return nil
 		}
-		fmt.Printf("error %s, Getting configMap%s\n", name, err.Error())
+		fmt.Printf("\nerror %s, Getting configMap%s\n", name, err.Error())
 		return err
 	}
 	// update all deployment object, Add the configMapRef
