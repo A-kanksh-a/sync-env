@@ -1,0 +1,27 @@
+
+
+#kubectl create role default-role --verb=update,get,list,watch --resource=deployments,configmaps
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: default-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - update
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - update
+  - get
+  - list
+  - watch
