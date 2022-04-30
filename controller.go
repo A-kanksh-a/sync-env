@@ -76,7 +76,7 @@ func (c *controller) processItem() bool {
 		fmt.Printf("\nError split key from Item %s", err.Error())
 		return false
 	}
-	fmt.Printf("\n Sync %s, %s", ns, name)
+	fmt.Printf("\n Sync configMap resource %s from namespace %s", name, ns)
 	err = c.syncCM(ns, name)
 	if err != nil {
 		return false
@@ -87,23 +87,54 @@ func (c *controller) processItem() bool {
 func (c *controller) syncCM(ns, name string) error {
 	ctx := context.Background()
 
-	_, err := c.clientset.CoreV1().ConfigMaps(ns).Get(context.Background(), name, metav1.GetOptions{})
-	if err != nil {
-		// handle error
-		fmt.Printf("error %s, Getting configMap%s\n", name, err.Error())
-		if errors.IsNotFound(err) {
-			// handle delete event
-		}
-	}
 	// Get all deployments that needs to be updated
 	deployments, err := c.clientset.AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		// handle error
 		fmt.Printf("error %s, listing deployments\n", err.Error())
 	}
-	// update all deployment object, Add the configMap
+
+	_, err = c.clientset.CoreV1().ConfigMaps(ns).Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		// handle error
+		if errors.IsNotFound(err) {
+			// handle delete event Remove configMap refernce from Deployment if present
+			for _, deployment := range deployments.Items {
+				deleteCmRef := false
+				var loc int
+				for i, envRef := range deployment.Spec.Template.Spec.Containers[0].EnvFrom {
+					if envRef.ConfigMapRef.LocalObjectReference.Name == name {
+						deleteCmRef = true
+						loc = i
+					}
+				}
+				if !deleteCmRef {
+					continue
+				}
+				fmt.Printf("\nUpdating deployment %s, Removing ConfigMap Ref...%s", deployment.Name, name)
+				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					// Retrieve the latest version of Deployment before attempting update
+					// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
+					result, getErr := c.clientset.AppsV1().Deployments(ns).Get(ctx, deployment.Name, metav1.GetOptions{})
+					if getErr != nil {
+						panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
+					}
+					allEnv := result.Spec.Template.Spec.Containers[0].EnvFrom
+					result.Spec.Template.Spec.Containers[0].EnvFrom = append(allEnv[:loc], allEnv[loc+1:]...)
+					_, updateErr := c.clientset.AppsV1().Deployments(ns).Update(context.TODO(), result, metav1.UpdateOptions{})
+					return updateErr
+				})
+				if retryErr != nil {
+					panic(fmt.Errorf("Update failed: %v", retryErr))
+				}
+			}
+			return nil
+		}
+		fmt.Printf("error %s, Getting configMap%s\n", name, err.Error())
+		return err
+	}
+	// update all deployment object, Add the configMapRef
 	for _, deployment := range deployments.Items {
-		fmt.Printf("\nUpdating deployment...%s", deployment.Name)
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			// Retrieve the latest version of Deployment before attempting update
 			// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
@@ -111,6 +142,17 @@ func (c *controller) syncCM(ns, name string) error {
 			if getErr != nil {
 				panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
 			}
+			addCmRef := true
+			for _, envRef := range deployment.Spec.Template.Spec.Containers[0].EnvFrom {
+				if envRef.ConfigMapRef.LocalObjectReference.Name == name {
+					addCmRef = false
+				}
+			}
+			if !addCmRef {
+				return nil
+			}
+			fmt.Printf("\nUpdating deployment...%s Adding configMap ref %s", deployment.Name, name)
+
 			EnvFrom := v1.EnvFromSource{
 				ConfigMapRef: &v1.ConfigMapEnvSource{
 					LocalObjectReference: v1.LocalObjectReference{
@@ -125,9 +167,7 @@ func (c *controller) syncCM(ns, name string) error {
 		if retryErr != nil {
 			panic(fmt.Errorf("Update failed: %v", retryErr))
 		}
-		fmt.Printf("\nUpdated deployment...%s", deployment.Name)
 	}
-
 	return nil
 }
 
@@ -137,9 +177,9 @@ func (c *controller) cmAdded(obj interface{}) {
 }
 func (c *controller) cmDeleted(obj interface{}) {
 	fmt.Println("Cm Deleted")
-	//	c.queue.Add(obj)
+	c.queue.Add(obj)
 }
 func (c *controller) cmUpdated(oldobj, newobj interface{}) {
-	fmt.Println("Cm UPdated")
+	fmt.Println("Cm Updated")
 	//c.queue.Add(newobj)
 }
