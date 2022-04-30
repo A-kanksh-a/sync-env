@@ -112,7 +112,7 @@ func (c *controller) syncCM(ns, name string) error {
 				if !deleteCmRef {
 					continue
 				}
-				fmt.Printf("\nUpdating deployment %s, Removing ConfigMap Ref...%s", deployment.Name, name)
+				fmt.Printf("\nUpdating deployment %s, Removing ConfigMap Ref...%s\n", deployment.Name, name)
 				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 					// Retrieve the latest version of Deployment before attempting update
 					// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
@@ -152,7 +152,7 @@ func (c *controller) syncCM(ns, name string) error {
 			if !addCmRef {
 				return nil
 			}
-			fmt.Printf("\nUpdating deployment...%s Adding configMap ref %s", deployment.Name, name)
+			fmt.Printf("\nUpdating deployment...%s Adding configMap ref %s\n", deployment.Name, name)
 
 			EnvFrom := v1.EnvFromSource{
 				ConfigMapRef: &v1.ConfigMapEnvSource{
