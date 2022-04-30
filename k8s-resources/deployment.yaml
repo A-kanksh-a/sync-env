@@ -1,0 +1,23 @@
+
+# kubectl create deployment sync-env --image akankshakumari393/sync-env:0.0.1
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sync-env
+  name: sync-env
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sync-env
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: sync-env
+    spec:
+      containers:
+      - image: akankshakumari393/sync-env:0.0.1
+        name: sync-env
