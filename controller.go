@@ -25,7 +25,7 @@ type controller struct {
 }
 
 func newController(clientset kubernetes.Interface, cmInformer coreinformers.ConfigMapInformer) *controller {
-	c := &controller{
+	controller := &controller{
 		clientset:   clientset,
 		cmLister:    cmInformer.Lister(),
 		cmhasSynced: cmInformer.Informer().HasSynced,
@@ -34,9 +34,9 @@ func newController(clientset kubernetes.Interface, cmInformer coreinformers.Conf
 
 	cmInformer.Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    c.cmAdded,
-			UpdateFunc: c.cmUpdated,
-			DeleteFunc: c.cmDeleted,
+			AddFunc:    controller.cmAdded,
+			UpdateFunc: controller.cmUpdated,
+			DeleteFunc: controller.cmDeleted,
 		},
 	)
 	return c
@@ -44,7 +44,7 @@ func newController(clientset kubernetes.Interface, cmInformer coreinformers.Conf
 
 func (c *controller) run(ch <-chan struct{}) {
 	fmt.Println("Running controller")
-	// Informer maintains a cache that needs to be synced for the first time this brings configMap from all the namespaces
+	// Informer maintains a cache that needs to be synced for the first time this brings configMap from default namespace
 	if !cache.WaitForCacheSync(ch, c.cmhasSynced) {
 		fmt.Printf("\nerror Cache not synced")
 	}
@@ -53,6 +53,7 @@ func (c *controller) run(ch <-chan struct{}) {
 	<-ch
 }
 
+// worker function operate on the queue and process each item
 func (c *controller) worker() {
 	fmt.Println("Worker called")
 	for c.processItem() {
@@ -98,7 +99,7 @@ func (c *controller) syncCM(ns, name string) error {
 	if err != nil {
 		// handle error
 		if errors.IsNotFound(err) {
-			// handle delete event Remove configMap refernce from Deployment if present
+			// handle delete event Remove configMap reference from Deployment if present
 			for _, deployment := range deployments.Items {
 				deleteCmRef := false
 				var loc int

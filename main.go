@@ -32,8 +32,8 @@ func main() {
 		// handle error
 		fmt.Printf("error %s, creating clientset\n", err.Error())
 	}
-	fmt.Println("List all Deployments in default Namespace")
 
+	fmt.Println("List all Deployments in default Namespace")
 	deployments, err := clientset.AppsV1().Deployments("default").List(context.Background(), v1.ListOptions{})
 	if err != nil {
 		// handle error
@@ -43,32 +43,31 @@ func main() {
 	for _, deployment := range deployments.Items {
 		fmt.Println(deployment.Name)
 	}
+
 	fmt.Println("List all Configmap in default Namespace")
 	cmList, err := clientset.CoreV1().ConfigMaps("default").List(context.Background(), v1.ListOptions{})
-
 	if err != nil {
 		// handle error
-		fmt.Printf("error %s, listing configMaps\n", err.Error())
+		fmt.Printf("\nerror %s, listing configMaps\n", err.Error())
 	}
-
 	for _, cm := range cmList.Items {
 		fmt.Println(cm.Name)
 	}
-	//If we want to watch specific resources
+
+	//If we want to create informer for specific resources
 	labelOptions := informers.WithTweakListOptions(func(opts *v1.ListOptions) {
 		//opts.LabelSelector = "app=nats-box"
 	})
 
 	// By default NewSharedInformerFactory creates informerfactory for all Namespaces
 	// Use NewSharedInformerFactoryWithOptions for creating informer instance in specific namespace
-	informers := informers.NewSharedInformerFactoryWithOptions(clientset, 10*time.Minute, informers.WithNamespace("default"), labelOptions)
+	defaultNamespaceinformers := informers.NewSharedInformerFactoryWithOptions(clientset, 10*time.Minute, informers.WithNamespace("default"), labelOptions)
+
 	ch := make(chan struct{})
-	c := newController(clientset, informers.Core().V1().ConfigMaps())
-	informers.Start(ch)
-	c.run(ch)
-	if err != nil {
-		// handle error
-		fmt.Printf("error %s, listing informers\n", err.Error())
-	}
-	fmt.Println(informers)
+
+	envSyncController := newController(clientset, defaultNamespaceinformers.Core().V1().ConfigMaps())
+
+	defaultNamespaceinformers.Start(ch)
+
+	envSyncController.run(ch)
 }
