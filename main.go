@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -53,4 +55,16 @@ func main() {
 		fmt.Println(cm.Name)
 	}
 
+	fmt.Println("Printing Informer")
+
+	informers := informers.NewSharedInformerFactory(clientset, 10*time.Minute)
+	ch := make(chan struct{})
+	c := newController(clientset, informers.Core().V1().ConfigMaps())
+	informers.Start(ch)
+	c.run(ch)
+	if err != nil {
+		// handle error
+		fmt.Printf("error %s, listing informers\n", err.Error())
+	}
+	fmt.Println(informers)
 }
