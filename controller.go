@@ -77,7 +77,7 @@ func (c *controller) processItem() bool {
 		fmt.Printf("\nError split key from Item %s", err.Error())
 		return false
 	}
-	fmt.Printf("\n Sync configMap resource %s from namespace %s", name, ns)
+	fmt.Printf("\n Sync configMap resource %s from namespace %s\n", name, ns)
 	err = c.syncCM(ns, name)
 	if err != nil {
 		return false
