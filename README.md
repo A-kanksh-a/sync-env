@@ -46,4 +46,7 @@ kubectl create rolebinding default-role-binding --role=default-role --user=syste
 # kubectl create -f k8s-resources/rolebinding.yaml
 ```
 
+Create deployment
+kubectl create -f k8s-resources/deployment.yaml -n sync-env
+
 ### Now any configmap added to default namespace would be added to env of the deployment 
